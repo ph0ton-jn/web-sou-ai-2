@@ -67,15 +67,14 @@ module.exports = async function handler(req, res) {
         const HF_TOKEN = process.env.HF_TOKEN;
         
         if (!HF_TOKEN) {
-            // 토큰이 없으면 폴백 응답 사용
             return res.status(200).json({ 
-                response: getFallbackResponse(message, conversationHistory?.length || 0)
+                response: "[DEBUG] HF_TOKEN이 설정되지 않았습니다."
             });
         }
 
         // Hugging Face Inference API 호출
         const response = await fetch(
-            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3",
+            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
             {
                 method: "POST",
                 headers: {
@@ -97,9 +96,8 @@ module.exports = async function handler(req, res) {
 
         if (!response.ok) {
             const errorData = await response.text();
-            console.error('HF API Error:', errorData);
             return res.status(200).json({ 
-                response: getFallbackResponse(message, conversationHistory?.length || 0)
+                response: "[DEBUG] HF API 오류: " + errorData
             });
         }
 
@@ -111,15 +109,16 @@ module.exports = async function handler(req, res) {
         generatedText = generatedText.split('\n')[0].trim();
         
         if (!generatedText || generatedText.length < 5) {
-            generatedText = getFallbackResponse(message, conversationHistory?.length || 0);
+            return res.status(200).json({ 
+                response: "[DEBUG] 생성된 텍스트가 너무 짧음: " + JSON.stringify(data)
+            });
         }
 
         return res.status(200).json({ response: generatedText });
 
     } catch (error) {
-        console.error('API Error:', error);
         return res.status(200).json({ 
-            response: getFallbackResponse(message, conversationHistory?.length || 0)
+            response: "[DEBUG] 에러: " + error.message
         });
     }
 }
