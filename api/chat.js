@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
         
         if (!HF_TOKEN) {
             return res.status(200).json({ 
-                response: "[DEBUG] HF_TOKEN이 설정되지 않았습니다."
+                response: "...어? 연결이 잘 안 되는 것 같아. 잠시 후에 다시 말해줄래?"
             });
         }
 
@@ -92,9 +92,8 @@ module.exports = async function handler(req, res) {
         );
 
         if (!response.ok) {
-            const errorData = await response.text();
             return res.status(200).json({ 
-                response: "[DEBUG] HF API 오류: " + errorData
+                response: "...음, 지금 좀 힘든 것 같아. 다시 말해줄 수 있어?"
             });
         }
 
@@ -106,7 +105,7 @@ module.exports = async function handler(req, res) {
         
         if (!generatedText || generatedText.length < 2) {
             return res.status(200).json({ 
-                response: "[DEBUG] 생성된 텍스트가 비어있음: " + JSON.stringify(data)
+                response: "...어, 뭐라고 해야 할지 모르겠어. 다시 말해줄래?"
             });
         }
 
@@ -114,7 +113,7 @@ module.exports = async function handler(req, res) {
 
     } catch (error) {
         return res.status(200).json({ 
-            response: "[DEBUG] 에러: " + error.message
+            response: "...이상해, 뭔가 잘 안 돼. 다시 한 번 말해줄래?"
         });
     }
 }
