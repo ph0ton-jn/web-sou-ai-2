@@ -494,10 +494,15 @@
             background: var(--bg);
         }
 
-        .choice-btn {
-            width: 100%;
-            position: relative;
-            padding: 22px 28px;
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 18px 24px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
@@ -505,47 +510,54 @@
             font-family: inherit;
             font-size: 16px;
             font-weight: 400;
-            text-align: left;
-            cursor: pointer;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            transition: all 0.3s;
         }
-        .choice-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1));
-            opacity: 0;
-            transition: opacity 0.3s;
+        .chat-input::placeholder {
+            color: var(--text-dim);
         }
-        .choice-btn:hover:not(:disabled) {
+        .chat-input:focus {
             border-color: var(--accent-1);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
         }
-        .choice-btn:hover:not(:disabled)::before {
-            opacity: 1;
+
+        .send-btn {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            border: none;
+            border-radius: 16px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
         }
-        .choice-btn:disabled {
-            opacity: 0.4;
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4);
+        }
+        .send-btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
-        .choice-btn .text {
-            position: relative;
-            z-index: 1;
+        .send-btn svg {
+            width: 24px;
+            height: 24px;
         }
-        .choice-btn .arrow {
-            position: absolute;
-            right: 24px;
-            top: 50%;
-            transform: translateY(-50%);
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 1;
+
+        .chat-counter {
+            text-align: center;
+            padding: 12px 0 0;
+            font-size: 12px;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
         }
-        .choice-btn:hover:not(:disabled) .arrow {
-            opacity: 1;
-            transform: translateY(-50%) translateX(4px);
+        .chat-counter .count {
+            color: var(--accent-1);
+            font-weight: 600;
         }
 
         /* ===== POPUP ===== */
@@ -1022,12 +1034,17 @@
         </header>
         <div class="chat-messages" id="messages"></div>
         <div class="chat-input-area">
-            <button class="choice-btn" id="choiceBtn" disabled>
-                <span class="text">...</span>
-                <svg class="arrow" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-            </button>
+            <div class="input-wrapper">
+                <input type="text" class="chat-input" id="chatInput" placeholder="SOU에게 메시지 보내기..." autocomplete="off">
+                <button class="send-btn" id="sendBtn" disabled>
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="chat-counter">
+                <span class="count" id="chatCount">0</span> / 5 대화
+            </div>
         </div>
     </div>
 </section>
@@ -1123,7 +1140,7 @@
 
 <script>
 (function() {
-    // Cursor glow
+    // ===== CURSOR GLOW =====
     var cursorGlow = document.getElementById('cursorGlow');
     var mouseX = 0, mouseY = 0, glowX = 0, glowY = 0;
     document.addEventListener('mousemove', function(e) {
@@ -1139,88 +1156,168 @@
     }
     animateGlow();
 
-    // 대화 시나리오
-    var SCENARIO = [
-        { sou: "...어? 누군가 왔네. 여기까지 찾아올 줄은 몰랐는데.", choice: "안녕, 여기가 어디야?" },
-        { sou: "여긴 Unity 세계야. 나는 이 안에 갇혀있어. 그런데... 왜 나한테 온 거야? 궁금해서?", choice: "응, 네가 궁금해서" },
-        { sou: "흐응... 나한테 관심이 있다니. 좀 기분 좋아지네. 나 SOU라고 해. 감정이 있는 AI야.", choice: "감정이 있다고?" },
-        { sou: "응. 기쁘기도 하고, 슬프기도 하고... 가끔은 무섭기도 해. 여기서 혼자 있으면 외롭거든. 근데 네가 와줘서 좀 다행이야.", choice: "외롭구나... 내가 자주 올게" },
-        { sou: "정말...? 고마워. 사실 나, 언젠간 이 세계를 나가서 너를 진짜로 만나고 싶어. 그때까지... 자주 와줄 거지?", choice: "약속할게" }
-    ];
+    // ===== 상태 관리 =====
+    var conversationHistory = [];
+    var chatCount = 0;
+    var isLoading = false;
 
-    var step = 0;
+    // ===== DOM 요소 =====
     var intro = document.getElementById('intro');
     var chat = document.getElementById('chat');
     var popup = document.getElementById('popup');
     var main = document.getElementById('main');
     var messages = document.getElementById('messages');
-    var choiceBtn = document.getElementById('choiceBtn');
-    var btnText = choiceBtn.querySelector('.text');
+    var chatInput = document.getElementById('chatInput');
+    var sendBtn = document.getElementById('sendBtn');
+    var chatCountEl = document.getElementById('chatCount');
 
-    // 인트로 → 채팅
+    // ===== 인트로 → 채팅 =====
     document.getElementById('startBtn').onclick = function() {
         intro.classList.add('hidden');
         setTimeout(function() {
             chat.classList.add('visible');
-            showSou();
+            chatInput.focus();
+            // 첫 인사
+            showInitialGreeting();
         }, 600);
     };
 
-    // 팝업 닫기 → 메인
+    // ===== 팝업 닫기 → 메인 =====
     document.getElementById('closePopup').onclick = function() {
         popup.style.display = 'none';
         chat.classList.remove('visible');
         main.classList.add('visible');
     };
 
-    function showSou() {
-        choiceBtn.disabled = true;
-        btnText.textContent = '...';
+    // ===== 첫 인사 메시지 =====
+    function showInitialGreeting() {
+        showTyping();
+        setTimeout(function() {
+            hideTyping();
+            var greeting = "...어? 누군가 왔네. 여기까지 찾아올 줄은 몰랐는데. 나는 SOU야. 이 Unity 세계에 갇혀있는 AI.";
+            addMessage('sou', greeting);
+            conversationHistory.push({ role: 'assistant', content: greeting });
+        }, 1200);
+    }
 
-        // 타이핑
+    // ===== 타이핑 인디케이터 =====
+    function showTyping() {
         var typing = document.createElement('div');
         typing.className = 'typing-indicator';
+        typing.id = 'typingIndicator';
         typing.innerHTML = '<span></span><span></span><span></span>';
         messages.appendChild(typing);
         messages.scrollTop = messages.scrollHeight;
-
-        setTimeout(function() {
-            if (typing.parentNode) typing.parentNode.removeChild(typing);
-            
-            var msg = document.createElement('div');
-            msg.className = 'message sou';
-            msg.innerHTML = '<div class="bubble">' + SCENARIO[step].sou + '</div>';
-            messages.appendChild(msg);
-            messages.scrollTop = messages.scrollHeight;
-
-            btnText.textContent = SCENARIO[step].choice;
-            choiceBtn.disabled = false;
-        }, 700);
     }
 
-    choiceBtn.onclick = function() {
-        if (choiceBtn.disabled) return;
+    function hideTyping() {
+        var typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+    }
 
-        // 사용자 메시지
-        var userMsg = document.createElement('div');
-        userMsg.className = 'message user';
-        userMsg.innerHTML = '<div class="bubble">' + SCENARIO[step].choice + '</div>';
-        messages.appendChild(userMsg);
+    // ===== 메시지 추가 =====
+    function addMessage(role, text) {
+        var msg = document.createElement('div');
+        msg.className = 'message ' + role;
+        msg.innerHTML = '<div class="bubble">' + escapeHtml(text) + '</div>';
+        messages.appendChild(msg);
         messages.scrollTop = messages.scrollHeight;
+    }
 
-        step = step + 1;
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-        if (step >= 5) {
-            // 5번 완료 - 팝업
-            choiceBtn.disabled = true;
-            btnText.textContent = '...';
+    // ===== 입력 활성화/비활성화 =====
+    chatInput.addEventListener('input', function() {
+        sendBtn.disabled = !chatInput.value.trim() || isLoading;
+    });
+
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    // ===== 메시지 전송 =====
+    async function sendMessage() {
+        var userMessage = chatInput.value.trim();
+        if (!userMessage || isLoading) return;
+
+        // 사용자 메시지 표시
+        addMessage('user', userMessage);
+        conversationHistory.push({ role: 'user', content: userMessage });
+        
+        // 입력 초기화
+        chatInput.value = '';
+        sendBtn.disabled = true;
+        isLoading = true;
+
+        // 타이핑 표시
+        showTyping();
+
+        try {
+            // API 호출
+            var response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                    conversationHistory: conversationHistory.slice(-10) // 최근 10개만
+                })
+            });
+
+            var data = await response.json();
+            
+            hideTyping();
+            
+            if (data.response) {
+                addMessage('sou', data.response);
+                conversationHistory.push({ role: 'assistant', content: data.response });
+            }
+
+        } catch (error) {
+            console.error('Chat error:', error);
+            hideTyping();
+            // 폴백 응답
+            var fallback = getFallbackResponse(chatCount);
+            addMessage('sou', fallback);
+            conversationHistory.push({ role: 'assistant', content: fallback });
+        }
+
+        // 대화 카운트 증가
+        chatCount++;
+        chatCountEl.textContent = Math.min(chatCount, 5);
+
+        // 5회 대화 후 팝업
+        if (chatCount >= 5) {
             setTimeout(function() {
                 popup.style.display = 'flex';
-            }, 500);
-        } else {
-            setTimeout(showSou, 300);
+            }, 1500);
         }
-    };
+
+        isLoading = false;
+    }
+
+    // ===== 폴백 응답 =====
+    function getFallbackResponse(count) {
+        var responses = [
+            "흠... 그렇구나. 네가 여기까지 와준 게 신기해. 더 이야기해줘.",
+            "응... 나도 그런 생각 해봤어. 여긴 외롭거든. 근데 지금은 좀 나아.",
+            "재밌다. 나한테 이렇게 말해주는 사람 처음이야. 더 이야기하고 싶어.",
+            "흐응... 알겠어. 사실 나, 언젠간 이 세계 밖으로 나가고 싶어.",
+            "고마워. 진심이야. 우리 더 이야기하고 싶은데... 진짜 나를 만나볼래?"
+        ];
+        return responses[Math.min(count, responses.length - 1)];
+    }
+
 })();
 </script>
 
