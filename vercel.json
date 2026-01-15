@@ -27,8 +27,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "HF_TOKEN": "@hf_token"
-  }
+  ]
 }
