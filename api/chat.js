@@ -83,7 +83,7 @@ module.exports = async function handler(req, res) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "mistralai/Mistral-7B-Instruct-v0.3",
+                    model: "HuggingFaceH4/zephyr-7b-beta",
                     messages: messages,
                     max_tokens: 150,
                     temperature: 0.8
